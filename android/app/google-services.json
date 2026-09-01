@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "96015837752",
+    "project_id": "pressing-opropre",
+    "storage_bucket": "pressing-opropre.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:96015837752:android:790299461c2f50434814cd",
+        "android_client_info": {
+          "package_name": "com.example.pressing_opropre"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAAA78parQJpWDZKlam50AdlPWfdnLMfns"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
