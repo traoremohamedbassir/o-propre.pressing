@@ -122,7 +122,7 @@ bool ischecked = true;
                       final nom = data['nom_clt']?.toString() ?? '';
                       final montant = (data['montant'] ?? 0).toString();
                       final service = data['service']?.toString();
-                      // final paiement = data['payer']?.toString();
+                      final numero = data['numero']?.toString() ?? '';
                       String dateStr = '';
                       if (data['date'] is Timestamp) {
                         final d = (data['date'] as Timestamp).toDate();
@@ -130,12 +130,12 @@ bool ischecked = true;
                       } else if (data['date'] is String) {
                         dateStr = data['date'];
                       }
-
+  
                       return ListTile(
                         title: Text(nom),
                         subtitle: Column(
                           children: [
-                            Text('Montant: $montant FCFA\nDate: $dateStr \nService: $service',
+                            Text('Montant: $montant FCFA\nDate: $dateStr \nService: $service \nNumero: $numero',
                             style: TextStyle(
                               fontWeight: FontWeight.w900,
                               fontSize: 15,

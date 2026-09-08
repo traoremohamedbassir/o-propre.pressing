@@ -33,6 +33,7 @@ class _RecetteCalculState extends State<RecetteCalcul> {
   final TextEditingController _nomcltController = TextEditingController();
   final TextEditingController _sommeController = TextEditingController();
   final TextEditingController _numfactController = TextEditingController();
+  final TextEditingController _numeroController = TextEditingController();
   final List<String> _produits = [];
   final Map<String, dynamic> _produitPrix = {};
   
@@ -115,6 +116,7 @@ class _RecetteCalculState extends State<RecetteCalcul> {
         transaction.set(invoiceRef, {
           'date': _dateController.text,
           'nom_clt': _nomcltController.text.trim(),
+          'nomerot': _numeroController.text.trim(),
           'montant': double.tryParse(_sommeController.text) ?? 0,
           'service': selectedser ?? 'lavage',
           'num_facture': invoiceNumber,
@@ -128,6 +130,7 @@ class _RecetteCalculState extends State<RecetteCalcul> {
       _lastInvoice = {
         'date': _dateController.text,
         'nom_clt': _nomcltController.text.trim(),
+          'nomerot': _numeroController.text.trim(),
         'montant': double.tryParse(_sommeController.text) ?? 0,
         'service': selectedser ?? 'lavage',
         'num_facture': invoiceNumber,
@@ -278,7 +281,7 @@ class _RecetteCalculState extends State<RecetteCalcul> {
                 SizedBox(height: 12),
                 TextField(
                   controller: _sommeController,
-                  readOnly: true,
+                  readOnly: false,
                   decoration: InputDecoration(
                     hintText: 'somme',
                     border: OutlineInputBorder(
@@ -300,7 +303,9 @@ class _RecetteCalculState extends State<RecetteCalcul> {
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
             child: Row(
               children: [
-                Expanded(
+                Row(
+                  children: [
+                     Expanded(
                   flex: 3,
                   child: TextField(
                     controller: _nomcltController,
@@ -320,8 +325,30 @@ class _RecetteCalculState extends State<RecetteCalcul> {
                   ),
                 ),
                 SizedBox(width: 4),
+                 Expanded(
+                  flex: 3,
+                  child: TextField(
+                    controller: _numeroController,
+                    decoration: InputDecoration(
+                      hintText: 'Numero',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: Colors.black),
+                      ),
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
+                    ),
+                  ),
+                ),
+                  ],
+                ),
+               
                 Expanded(
-                  flex: 2,
+                  flex: 3,
                   child: Container(
                     decoration: BoxDecoration(
                       border: Border.all(color: Colors.grey),
