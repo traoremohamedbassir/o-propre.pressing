@@ -301,7 +301,7 @@ class _RecetteCalculState extends State<RecetteCalcul> {
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-            child: Row(
+            child: Column(
               children: [
                 Row(
                   children: [
@@ -346,7 +346,9 @@ class _RecetteCalculState extends State<RecetteCalcul> {
                 ),
                   ],
                 ),
-               
+                SizedBox(height: 5),
+               Row(
+                children: [
                 Expanded(
                   flex: 3,
                   child: Container(
@@ -419,6 +421,7 @@ class _RecetteCalculState extends State<RecetteCalcul> {
                     ),
                   ),
                 ),
+               ]),
               ],
             ),
           ),
