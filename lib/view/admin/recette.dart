@@ -2,6 +2,7 @@
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:pressing_opropre/view/admin/encaissement.dart';
 // import 'package:intl/intl.dart';
 import 'package:pressing_opropre/view/admin/rec_calcule.dart';
 import 'package:pressing_opropre/view/constant/drawer.dart';
@@ -19,7 +20,165 @@ class _RecetteState extends State<Recette> {
   );
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
-bool ischecked = true;
+  bool ischecked = true;
+  // recherche date
+
+  DateTime? _parseDateFromValue(dynamic value) {
+    if (value is Timestamp) return value.toDate();
+    if (value is DateTime) return value;
+    if (value is! String) return null;
+
+    final text = value.trim();
+    if (text.isEmpty) return null;
+
+    final formats = [
+      'dd/MM/yyyy',
+      'dd-MM-yyyy',
+      'yyyy-MM-dd',
+      'yyyy/MM/dd',
+    ];
+
+    for (final pattern in formats) {
+      try {
+        final date = _parseDateString(text, pattern);
+        if (date != null) return date;
+      } catch (_) {}
+    }
+
+    return null;
+  }
+
+  DateTime? _parseDateString(String value, String pattern) {
+    final parts = value.split(RegExp(r'[/\-]'));
+    if (parts.length != 3) return null;
+
+    int day = 0;
+    int month = 0;
+    int year = 0;
+
+    if (pattern == 'dd/MM/yyyy' || pattern == 'dd-MM-yyyy') {
+      day = int.tryParse(parts[0]) ?? 0;
+      month = int.tryParse(parts[1]) ?? 0;
+      year = int.tryParse(parts[2]) ?? 0;
+    } else {
+      year = int.tryParse(parts[0]) ?? 0;
+      month = int.tryParse(parts[1]) ?? 0;
+      day = int.tryParse(parts[2]) ?? 0;
+    }
+
+    if (day == 0 || month == 0 || year == 0) return null;
+
+    final date = DateTime(year, month, day);
+    if (date.day != day || date.month != month || date.year != year) return null;
+    return date;
+  }
+
+  bool _matchesSearch(Map<String, dynamic> data) {
+    final query = _searchQuery.trim();
+    if (query.isEmpty) return true;
+
+    final nom = (data['nom_clt'] ?? '').toString().toLowerCase();
+    if (nom.contains(query.toLowerCase())) return true;
+
+    final itemDate = _parseDateFromValue(data['date']);
+    if (itemDate == null) return false;
+
+    final selectedDate = _parseDateString(query, 'dd/MM/yyyy');
+    if (selectedDate == null) return false;
+
+    return itemDate.year == selectedDate.year &&
+        itemDate.month == selectedDate.month &&
+        itemDate.day == selectedDate.day;
+  }
+
+  Future<void> _pickDateFilter() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+    );
+
+    if (picked == null) return;
+
+    final formatted =
+        '${picked.day.toString().padLeft(2, '0')}/${picked.month.toString().padLeft(2, '0')}/${picked.year}';
+
+    setState(() {
+      _searchController.text = formatted;
+      _searchQuery = formatted;
+    });
+  }
+
+  // mise a jour
+  Future<void> _updaterecette(DocumentSnapshot doc) async {
+    final data = doc.data() as Map<String, dynamic>? ?? {};
+    final _nomcltController = TextEditingController(
+      text: data['nom_clt']?.toString() ?? '',
+    );
+    final _sommeController = TextEditingController(
+      text: data['montant']?.toString() ?? '',
+    );
+     final _numeroController = TextEditingController(
+      text: data['numero']?.toString() ?? '',
+    );
+   
+
+    final updated = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
+        title: const Text('Modifier le produit'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(controller: _nomcltController, decoration: const InputDecoration(labelText: 'Nom client')),
+              const SizedBox(height: 8),
+              TextFormField(controller: _sommeController, decoration: const InputDecoration(labelText: 'montant')),
+              const SizedBox(height: 8),
+              TextFormField(controller: _numeroController, decoration: const InputDecoration(labelText: 'numero')),
+              const SizedBox(height: 8),
+             
+              ],
+          ),
+        ),
+       
+       
+        // 'numero': _numeroController.text.trim(),
+        // 'montant': double.tryParse(_sommeController.text) ?? 0,
+        // 'service': selectedser ?? 'lavage',
+        // 'syspaiement ': selectedpaie ?? 'espece',
+       
+       
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Annuler'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context, {
+                'nom_clt': _nomcltController.text.trim(),
+                'montant': _sommeController.text.trim(),
+                'numero': _numeroController.text.trim(),
+               
+                });
+            },
+            child: const Text('Enregistrer'),
+          ),
+        ],
+      ),
+    );
+
+    _nomcltController.dispose();
+    _sommeController.dispose();
+    _numeroController.dispose();
+    
+
+    if (updated == null) return;
+    await _recette.doc(doc.id).update(updated);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -35,6 +194,14 @@ bool ischecked = true;
           ),
           iconTheme: const IconThemeData(color: Colors.black),
           actions: [
+             IconButton(
+              tooltip: 'Encaissement',
+              onPressed: (){
+               Navigator.push(context, MaterialPageRoute(builder: (_)
+                 => Encaissement(),
+               ));
+             }, icon: Icon(Icons.payment, color: Colors.white, size: 40)),
+              SizedBox(width: 6),
             Padding(
               padding: const EdgeInsets.only(right: 12),
               child: Container(
@@ -43,6 +210,7 @@ bool ischecked = true;
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: IconButton(
+                  
                   onPressed: () {
                     Navigator.push(
                       context,
@@ -65,18 +233,27 @@ bool ischecked = true;
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
-                hintText: 'Rechercher un client par nom',
-                prefixIcon: Icon(Icons.search),
-                suffixIcon: _searchQuery.isEmpty
-                              ? null
-                              : IconButton(
-                                  tooltip: 'Effacer la recherche',
-                                  icon: const Icon(Icons.clear),
-                                  onPressed: () {
-                                    _searchController.clear();
-                                    setState(() => _searchQuery = '');
-                                  },
-                                ),
+                hintText: 'Rechercher par nom ou date (JJ/MM/AAAA)',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (_searchQuery.isNotEmpty)
+                      IconButton(
+                        tooltip: 'Effacer la recherche',
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          _searchController.clear();
+                          setState(() => _searchQuery = '');
+                        },
+                      ),
+                    IconButton(
+                      tooltip: 'Choisir une date',
+                      icon: const Icon(Icons.calendar_today_outlined),
+                      onPressed: _pickDateFilter,
+                    ),
+                  ],
+                ),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
               ),
               onChanged: (v) => setState(() => _searchQuery = v.trim()),
@@ -85,7 +262,7 @@ bool ischecked = true;
           SizedBox(height: 10),
           Center(
             child: Text(
-              'leste des cl',
+              'liste des clients',
               style: TextStyle(
                 fontWeight: FontWeight.w700,
                 fontSize: 24,
@@ -105,7 +282,9 @@ bool ischecked = true;
                   );
                   if (snapshot.connectionState == ConnectionState.waiting) return Center(child: CircularProgressIndicator());
 
-                  final docs = snapshot.data?.docs ?? [];
+                  final docs = (snapshot.data?.docs ?? [])
+                      .where((doc) => _matchesSearch(doc.data() as Map<String, dynamic>? ?? {}))
+                      .toList();
                   if (docs.isEmpty) return Padding(
                     padding: const EdgeInsets.all(16.0),
                     child: Text('Aucune recette trouvé'),
@@ -122,6 +301,7 @@ bool ischecked = true;
                       final nom = data['nom_clt']?.toString() ?? '';
                       final montant = (data['montant'] ?? 0).toString();
                       final service = data['service']?.toString();
+                      final syspaiement = data['syspaiement ']?.toString();
                       final numero = data['numero']?.toString() ?? '';
                       String dateStr = '';
                       if (data['date'] is Timestamp) {
@@ -132,10 +312,16 @@ bool ischecked = true;
                       }
   
                       return ListTile(
-                        title: Text(nom),
+                        title: Row(
+                          children: [
+                            Text(nom),
+                            SizedBox(width: 20,),
+                            Text(' -   $numero'),
+                          ],
+                        ),
                         subtitle: Column(
                           children: [
-                            Text('Montant: $montant FCFA\nDate: $dateStr \nService: $service \nNumero: $numero',
+                            Text('Montant: $montant FCFA\nDate: $dateStr \nService: $service \npaiement : $syspaiement',
                             style: TextStyle(
                               fontWeight: FontWeight.w900,
                               fontSize: 15,
@@ -151,11 +337,15 @@ bool ischecked = true;
                             ),
                             ),
                                 Checkbox(
+                                  
                                 value: data['retrait'] == true,
                                 onChanged: (value) {
                                 _recette.doc(doc.reference.id).update({
                                   'retrait': value
                                 });
+                                setState(() {
+                                     showDialog(context: context, builder: (context) => Ajoutencaisse());
+                                  });
                                  },
                                  activeColor: Colors.brown,
                               ),
@@ -187,7 +377,9 @@ bool ischecked = true;
                             IconButton(
                               tooltip: 'modifier',
                               icon: Icon(Icons.edit,color: Colors.green,),
-                              onPressed: (){},
+                              onPressed: (){
+                                _updaterecette(doc);
+                              },
                             ),
                             IconButton(
                               tooltip: 'supprimer',
@@ -214,18 +406,7 @@ bool ischecked = true;
     );
   }
   Stream<QuerySnapshot> _recetteStream() {
-    if (_searchQuery.isEmpty) {
-      return _recette.orderBy('date', descending: true).snapshots();
-    }
-
-    // prefix search on nom_clt
-    final start = _searchQuery;
-    final end = '$_searchQuery\uf8ff';
-    return _recette
-        .where('nom_clt', isGreaterThanOrEqualTo: start)
-        .where('nom_clt', isLessThanOrEqualTo: end)
-        .orderBy('nom_clt')
-        .snapshots();
+    return _recette.orderBy('date', descending: true).snapshots();
   }
   
   // affiche la liste des produits d'une recette
@@ -256,29 +437,14 @@ bool ischecked = true;
               
 
               return ListTile(
-                title: Text(nomP),
-                subtitle: Text('Quantité: $quantite'),
-                // trailing: Row(
-                //   mainAxisSize: MainAxisSize.min,
-                //   children: [
-                //     Text(retrait ? 'Retiré' : 'En attente'),
-                //     SizedBox(width: 8),
-                //     Checkbox(
-                //       value: retrait,
-                //       onChanged: (val) async {
-                //         // Met à jour localement la liste et dans firestore
-                //         final updated = List<Map<String, dynamic>>.from(produits.map((e) 
-                //         => Map<String, dynamic>.from(e as Map)));
-                //         updated[index]['retrait'] = val == true;
-                //         await _recette.doc(doc.reference.id).update({'produits': updated});
-                //         setState(() {});
-                //         Navigator.of(context).pop();
-                //         // rouvrir le dialogue pour rafraichir
-                //         Future.delayed(Duration(milliseconds: 100), () => _showProductsDialog(doc));
-                //       },
-                //     ),
-                //   ],
-                // ),
+                title: Row(
+                  children: [
+                    Text(nomP),
+                    SizedBox(width: 10),
+                    Text(quantite),
+                  ],
+                ),
+               
               );
             },
             

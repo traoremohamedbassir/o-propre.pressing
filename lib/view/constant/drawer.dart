@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:pressing_opropre/view/admin/caisse.dart';
+import 'package:pressing_opropre/view/admin/encaissement.dart';
 import 'package:pressing_opropre/view/admin/home_adm.dart';
 import 'package:pressing_opropre/view/admin/produit.dart';
 import 'package:pressing_opropre/view/admin/rapport.dart';
@@ -79,6 +80,18 @@ class Drawers extends StatelessWidget {
                     MaterialPageRoute(
                       builder: (context) {
                         return Recette();
+                      },
+                    ),
+                  ),
+                ),
+                 _DrawerMenuItem(
+                  icon: Icons.money_rounded,
+                  title: 'Encaissement',
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) {
+                        return Encaissement();
                       },
                     ),
                   ),

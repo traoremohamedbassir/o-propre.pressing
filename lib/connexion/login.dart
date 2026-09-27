@@ -205,7 +205,7 @@ final _formKey = GlobalKey<FormState>();
                             child: ElevatedButton(
                               onPressed: login,
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF0F172A),
+                                backgroundColor: const Color.fromRGBO(33, 150, 243, 1),
                                 foregroundColor: Colors.white,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(16),

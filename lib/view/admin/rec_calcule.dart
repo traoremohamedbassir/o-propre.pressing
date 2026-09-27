@@ -1,8 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-// import 'package:pdf/pdf.dart';
-// import 'package:pdf/widgets.dart' as pw;
-// import 'package:printing/printing.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 class ProductRowData {
   ProductRowData();
@@ -28,6 +25,7 @@ class _RecetteCalculState extends State<RecetteCalcul> {
     "recettes",
   );
   String? selectedser = "lavage";
+  String? selectedpaie = "espece";
   final List<ProductRowData> _rows = [ProductRowData()];
   final TextEditingController _dateController = TextEditingController();
   final TextEditingController _nomcltController = TextEditingController();
@@ -36,10 +34,11 @@ class _RecetteCalculState extends State<RecetteCalcul> {
   final TextEditingController _numeroController = TextEditingController();
   final List<String> _produits = [];
   final Map<String, dynamic> _produitPrix = {};
-  
+  final _formKey = GlobalKey<FormState>();
 
   Map<String, dynamic>? _lastInvoice;
   bool _isSaving = false;
+  bool _isManualTotal = false;
 
   @override
   void initState() {
@@ -47,7 +46,6 @@ class _RecetteCalculState extends State<RecetteCalcul> {
     _dateController.text = _todayDate();
     _loadNextInvoiceNumber();
     _loadProduits();
-    _sommeController.addListener(_updateTotal);
   }
 // num facture
   Future<void> _loadNextInvoiceNumber() async {
@@ -65,10 +63,11 @@ class _RecetteCalculState extends State<RecetteCalcul> {
   Future<void> _saveInvoice() async {
     if (_isSaving) return;
 
-    if (_nomcltController.text.trim().isEmpty) {
-      _showMessage('Le nom du client est requis.');
-      return;
-    }
+    // if (_nomcltController.text.trim().isEmpty) {
+    //   _showMessage('Le nom du client est requis.');
+    //   return;
+    // }
+    if (!_formKey.currentState!.validate()) return;
     // table produit
     final products = _rows
         .where((row) => row.nomController.text.trim().isNotEmpty)
@@ -116,9 +115,10 @@ class _RecetteCalculState extends State<RecetteCalcul> {
         transaction.set(invoiceRef, {
           'date': _dateController.text,
           'nom_clt': _nomcltController.text.trim(),
-          'nomerot': _numeroController.text.trim(),
+          'numero': _numeroController.text.trim(),
           'montant': double.tryParse(_sommeController.text) ?? 0,
           'service': selectedser ?? 'lavage',
+          'syspaiement ': selectedpaie ?? 'espece',
           'num_facture': invoiceNumber,
           'produits': products,
           'created_at': FieldValue.serverTimestamp(),
@@ -130,9 +130,10 @@ class _RecetteCalculState extends State<RecetteCalcul> {
       _lastInvoice = {
         'date': _dateController.text,
         'nom_clt': _nomcltController.text.trim(),
-          'nomerot': _numeroController.text.trim(),
+        'numero': _numeroController.text.trim(),
         'montant': double.tryParse(_sommeController.text) ?? 0,
         'service': selectedser ?? 'lavage',
+        'syspaiement ': selectedpaie ?? 'espece',
         'num_facture': invoiceNumber,
         'produits': products,
       };
@@ -149,6 +150,7 @@ class _RecetteCalculState extends State<RecetteCalcul> {
     _numfactController.clear();
     _nomcltController.clear();
     _sommeController.clear();
+    _isManualTotal = false;
     setState(() {
       selectedser = 'lavage';
       _rows
@@ -166,12 +168,13 @@ class _RecetteCalculState extends State<RecetteCalcul> {
 
   @override
   void dispose() {
-    _sommeController.removeListener(_updateTotal);
     _dateController.dispose();
     _nomcltController.dispose();
+    _sommeController.dispose();
+    _numfactController.dispose();
+    _numeroController.dispose();
     for (final row in _rows) {
       row.nomController.dispose();
-      
       row.prixController.dispose();
       row.quantiteController.dispose();
     }
@@ -180,6 +183,8 @@ class _RecetteCalculState extends State<RecetteCalcul> {
 
   // somme totale
   void _updateTotal() {
+    if (_isManualTotal) return;
+
     double total = 0;
 
     for (final row in _rows) {
@@ -238,8 +243,145 @@ class _RecetteCalculState extends State<RecetteCalcul> {
       backgroundColor:  Colors.blue.shade100,
       appBar: AppBar(
         backgroundColor: Colors.blue.shade700,
-        title: Text('Cal'),
+        title: Text('Calcul Rec'),
         actions: [
+          IconButton(onPressed: (){
+            showDialog(context: context, builder: (context) => AlertDialog(
+              title: Text('les formules'),
+              content: Column(children: [
+               Text(' 1 vetement a 500 fcfa',
+               style: TextStyle(fontSize: 18,
+               fontWeight: FontWeight.bold),
+               ),
+               Text(' 5 vetements a 2000 fcfa ',
+               style: TextStyle(fontSize: 18,
+               fontWeight: FontWeight.bold),
+               ),
+               Text(' 10 vetements a 3500 fcfa',
+               style: TextStyle(fontSize: 18,
+               fontWeight: FontWeight.bold),
+               ),
+               Text(' 15 vetements a 5500 fcfa',
+               style: TextStyle(fontSize: 18,
+               fontWeight: FontWeight.bold),
+               )
+              ],),
+            ));
+          }, icon: Icon(Icons.list_alt_outlined, color: Colors.white)),
+          IconButton(
+            onPressed: () {
+              String display = '';
+              double? firstValue;
+              String? operator;
+
+              showDialog(
+                context: context,
+                builder: (context) => StatefulBuilder(
+                  builder: (context, setState) {
+                    void onNum(String v) {
+                      setState(() => display += v);
+                    }
+
+                    void onOp(String op) {
+                      firstValue = double.tryParse(display) ?? 0;
+                      operator = op;
+                      setState(() => display = '');
+                    }
+
+                    void onClear() {
+                      firstValue = null;
+                      operator = null;
+                      setState(() => display = '');
+                    }
+
+                    void onBack() {
+                      if (display.isNotEmpty) {
+                        setState(() => display = display.substring(0, display.length - 1));
+                      }
+                    }
+
+                    void onEquals() {
+                      final second = double.tryParse(display) ?? 0;
+                      double result = 0;
+                      if (operator == '+') result = (firstValue ?? 0) + second;
+                      else if (operator == '-') result = (firstValue ?? 0) - second;
+                      else if (operator == '×' || operator == '*') result = (firstValue ?? 0) * second;
+                      else if (operator == '÷' || operator == '/') result = (second == 0) ? 0 : (firstValue ?? 0) / second;
+
+                      final textResult = (result % 1 == 0) ? result.toStringAsFixed(0) : result.toStringAsFixed(2);
+                      setState(() => display = textResult);
+                      _sommeController.text = textResult;
+                      // 
+                      _isManualTotal = true;
+                    }
+
+                    final buttons = [
+                      '7', '8', '9', '÷',
+                      '4', '5', '6', '×',
+                      '1', '2', '3', '-',
+                      '0', '.', '=', '+',
+                    ];
+
+                    return AlertDialog(
+                      title: const Text('Calculatrice'),
+                      content: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            alignment: Alignment.centerRight,
+                            child: Text(display.isEmpty ? '0' : display, style: const TextStyle(fontSize: 28)),
+                          ),
+                          const SizedBox(height: 8),
+                          SizedBox(
+                            height: 320,
+                            width: 320,
+                            child: GridView.count(
+                              crossAxisCount: 4,
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              children: [
+                                for (final b in buttons)
+                                  Padding(
+                                    padding: const EdgeInsets.all(6.0),
+                                    child: ElevatedButton(
+                                      onPressed: () {
+                                        if (b == '=') return onEquals();
+                                        if (b == '÷' || b == '×' || b == '+' || b == '-') return onOp(b);
+                                        if (b == '.') {
+                                          if (!display.contains('.')) onNum('.');
+                                          return;
+                                        }
+                                        onNum(b);
+                                      },
+                                      child: Text(b, style: const TextStyle(fontSize: 20)),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              OutlinedButton(onPressed: onClear, child: const Text('C')),
+                              OutlinedButton(onPressed: onBack, child: const Icon(Icons.backspace)),
+                              ElevatedButton(
+                                onPressed: () => Navigator.pop(context),
+                                child: const Text('Fermer'),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              );
+            },
+            icon: const Icon(Icons.calculate_outlined, color: Colors.white),
+          ),
+          SizedBox(height: 10),
           Padding(
             padding: const EdgeInsets.only(right: 8),
             child: FilledButton.icon(
@@ -281,7 +423,10 @@ class _RecetteCalculState extends State<RecetteCalcul> {
                 SizedBox(height: 12),
                 TextField(
                   controller: _sommeController,
-                  readOnly: false,
+                  keyboardType: TextInputType.number,
+                  onChanged: (_) {
+                    _isManualTotal = true;
+                  },
                   decoration: InputDecoration(
                     hintText: 'somme',
                     border: OutlineInputBorder(
@@ -303,48 +448,59 @@ class _RecetteCalculState extends State<RecetteCalcul> {
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
             child: Column(
               children: [
-                Row(
-                  children: [
-                     Expanded(
-                  flex: 3,
-                  child: TextField(
-                    controller: _nomcltController,
-                    decoration: InputDecoration(
-                      hintText: 'Nom du client',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(6),
+                Form(
+                  key: _formKey,
+                  child: Row(
+                    children: [
+                    Expanded(
+                    flex: 3,
+                    child: TextFormField(
+                      controller: _nomcltController,
+                      decoration: InputDecoration(
+                        hintText: 'Nom du client',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderSide: BorderSide(color: Colors.black),
+                        ),
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 10,
+                        ),
                       ),
-                      focusedBorder: OutlineInputBorder(
-                        borderSide: BorderSide(color: Colors.black),
-                      ),
-                      contentPadding: EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 10,
-                      ),
+                       validator: (value) {
+                    if (value == null || value.trim().isEmpty) return 'nom est requis';
+                    return null;
+                  },
                     ),
                   ),
-                ),
-                SizedBox(width: 4),
-                 Expanded(
-                  flex: 3,
-                  child: TextField(
-                    controller: _numeroController,
-                    decoration: InputDecoration(
-                      hintText: 'Numero',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderSide: BorderSide(color: Colors.black),
-                      ),
-                      contentPadding: EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 10,
-                      ),
+                  SizedBox(width: 4),
+                   Expanded(
+                    flex: 3,
+                    child: TextFormField(
+                      controller: _numeroController,
+                      decoration: InputDecoration(
+                        hintText: 'Numero',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderSide: BorderSide(color: Colors.black),
+                        ),
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 10,
+                        ),
+                      ), validator: (value) {
+                    if (value == null || value.trim().isEmpty) return 'numero est requis';
+                    return null;
+                  },
+
                     ),
                   ),
-                ),
-                  ],
+                    ],
+                  ),
                 ),
                 SizedBox(height: 5),
                Row(
@@ -386,6 +542,43 @@ class _RecetteCalculState extends State<RecetteCalcul> {
                   ),
                 ),
                 SizedBox(width: 4),
+                Expanded(
+                  flex: 3,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: DropdownButton<String>(
+                      value: selectedpaie,
+                      isExpanded: true,
+                      hint: Text('systeme depaiement'),
+
+                      underline: SizedBox(),
+                      items: [
+                        DropdownMenuItem(
+                          value: 'espece',
+                          child: Text('espece'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'wave',
+                          child: Text('wave'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'orange money',
+                          child: Text('orange money'),
+                        ),
+                        
+                      ],
+                      onChanged: (String? value) {
+                        setState(() {
+                          selectedpaie = value ?? 'espece';
+                        });
+                      },
+                    ),
+                  ),
+                ),
+                 SizedBox(width: 4),
                 Expanded(
                   flex: 2,
                   child: TextField(
@@ -554,148 +747,3 @@ class _RecetteCalculState extends State<RecetteCalcul> {
     );
   }
 }
-
-// class Ajoutclt extends StatefulWidget {
-//   const Ajoutclt({super.key});
-
-//   @override
-//   State<Ajoutclt> createState() => _AjoutcltState();
-// }
-
-// class _AjoutcltState extends State<Ajoutclt> {
-//   final TextEditingController _nomcltController = TextEditingController();
-
-//   final TextEditingController _sommeContoller = TextEditingController();
-
-//   final TextEditingController _dateController = TextEditingController();
-//   final _formKey = GlobalKey<FormState>();
-
-//   @override
-//   void initState() {
-//     super.initState();
-//     final now = DateTime.now();
-//     _dateController.text = '${now.day.toString().padLeft(2, '0')}/${now.month.toString().padLeft(2, '0')}/${now.year}';
-//   }
-//   final CollectionReference _credit = FirebaseFirestore.instance.collection(
-//     "credits",
-//   );
- 
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return AlertDialog(
-//       backgroundColor: Colors.white,
-//       // title: Text('Ajoutclter un article'),
-      
-//       content: Form(
-//         key: _formKey,
-//         child: Column(
-//           mainAxisSize: MainAxisSize.min,
-//           children: [
-            
-//             SizedBox(height: 10),
-//             TextFormField(
-//               controller: _nomcltController,
-//               decoration: InputDecoration(
-//                 hintText: 'Nom clt',
-//                 fillColor: Colors.white,
-//                 filled: true,
-//                 // prefixIcon: Icon(Icons.lock),
-//                 focusedBorder: OutlineInputBorder(
-//                   borderRadius: BorderRadius.circular(40),
-//                   borderSide: BorderSide(color: Colors.black),
-//                 ),
-//                 enabledBorder: OutlineInputBorder(
-//                   borderRadius: BorderRadius.circular(40),
-//                   borderSide: BorderSide(color: Colors.black),
-//                 ),
-//               ),
-//               validator: (value) {
-//                     if (value == null || value.trim().isEmpty) return 'Le nom est requis';
-//                     return null;
-//                   },
-//             ),
-        
-//             SizedBox(height: 6),
-//             TextFormField(
-//               controller: _sommeContoller,
-//               decoration: InputDecoration(
-//                 hintText: "montant",
-//                 fillColor: Colors.white,
-//                 filled: true,
-//                 // prefixIcon: Icon(Icons.lock),
-//                 focusedBorder: OutlineInputBorder(
-//                   borderRadius: BorderRadius.circular(40),
-//                   borderSide: BorderSide(color: Colors.black),
-//                 ),
-//                 enabledBorder: OutlineInputBorder(
-//                   borderRadius: BorderRadius.circular(40),
-//                   borderSide: BorderSide(color: Colors.black),
-//                 ),
-//               ),
-//              validator: (value) {
-//                     if (value == null || value.trim().isEmpty) return 'Le montant est requis';
-//                     return null;
-//                   },
-//             ),
-        
-//             SizedBox(height: 6),
-//             TextFormField(
-              
-//               controller: _dateController,
-//                     readOnly: true,
-//               decoration: InputDecoration(
-//                 hintText: 'date',
-//                 fillColor: Colors.white,
-//                 filled: true,
-//                 // prefixIcon: Icon(Icons.lock),
-//                 focusedBorder: OutlineInputBorder(
-//                   borderRadius: BorderRadius.circular(40),
-//                   borderSide: BorderSide(color: Colors.black),
-//                 ),
-//                 enabledBorder: OutlineInputBorder(
-//                   borderRadius: BorderRadius.circular(40),
-//                   borderSide: BorderSide(color: Colors.black),
-//                 ),
-//               ),
-              
-//             ),
-//             SizedBox(height: 6),
-           
-//           ],
-//         ),
-//       ),
-//       actions: [
-//         Row(
-//           mainAxisAlignment: MainAxisAlignment.spaceBetween,
-//           children: [
-//             TextButton(
-//               onPressed: () => Navigator.pop(context),
-//               child: Text('Annuler'),
-//             ),
-//             TextButton(
-//               onPressed: () async {
-//                 if (!_formKey.currentState!.validate()) return;
-                
-//                 await _credit.add({
-//                   'nom_clt': _nomcltController.text,
-//                   'date': _dateController.text,
-//                   'montant': _sommeContoller.text,
-                  
-//                 });
-//                 _nomcltController.clear();
-//                 _dateController.clear();
-//                 _sommeContoller.clear();
-                
-//                 setState(() {
-//                   Navigator.pop(context);
-//                 });
-//               },
-//               child: Text('Ajouter'),
-//             ),
-//           ],
-//         ),
-//       ],
-//     );
-//   }
-// }
