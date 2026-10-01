@@ -248,7 +248,7 @@ class _RecetteState extends State<Recette> {
               child: Container(
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.15),
+                  color: Colors.white,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: IconButton(
