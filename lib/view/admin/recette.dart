@@ -260,7 +260,7 @@ class _RecetteState extends State<Recette> {
                       ),
                     );
                   },
-                  icon: const Icon(Icons.add, color: Colors.white),
+                  icon: const Icon(Icons.add, color: Colors.black),
                 ),
               ),
             ),

@@ -26,7 +26,7 @@ class _MyAppState extends State<MyApp> {
   }
 
   Future<void> _loadApp() async {
-    await Future.delayed(const Duration(milliseconds: 1400));
+    await Future.delayed(const Duration(milliseconds: 2400));
     if (mounted) {
       setState(() => _isLoading = false);
     }
@@ -61,9 +61,11 @@ class _MyAppState extends State<MyApp> {
                         "Pressing O'propre",
                         textAlign: TextAlign.center,
                         style: TextStyle(
-                          fontSize: 24,
+                          fontSize: 34,
                           fontWeight: FontWeight.w700,
-                          color: Color(0xFF1F2937),
+                          color: Colors.blue,
+                          fontStyle: FontStyle.italic,
+                          
                         ),
                       ),
                       SizedBox(height: 18),
