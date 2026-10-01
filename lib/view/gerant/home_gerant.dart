@@ -17,57 +17,57 @@ class Homegerant extends StatefulWidget {
 class _HomegerantState extends State<Homegerant> {
   final AuthService _authService = AuthService();
   String _userName = '';
-  late Future<Map<String, dynamic>> _statsFuture;
-  
+  late Stream<Map<String, dynamic>> _statsStream;
 
   @override
   void initState() {
     super.initState();
     _loadUserName();
-    _statsFuture = _loadStats();
+    _statsStream = _watchEncaissementStats();
   }
 
-  Future<Map<String, dynamic>> _loadStats() async {
-    final recettes = FirebaseFirestore.instance.collection('recettes');
+  Stream<Map<String, dynamic>> _watchEncaissementStats() {
+    return FirebaseFirestore.instance
+        .collection('encaissement')
+        .snapshots()
+        .map((snapshot) {
+      final now = DateTime.now();
+      double recetteDuJour = 0;
+      double recetteMensuelle = 0;
 
-  
-    final user = FirebaseAuth.instance.currentUser;
-    QuerySnapshot recetteSnapshot;
-    if (user != null) {
-      recetteSnapshot = await recettes.where('user_id', isEqualTo: user.uid).get();
-    } else {
-      recetteSnapshot = await recettes.get();
-    }
+      for (final doc in snapshot.docs) {
+        final data = doc.data();
+        final montant = _toDouble(data['montant']);
 
-    
+        DateTime? parsed;
+        if (data['date'] is Timestamp) {
+          parsed = (data['date'] as Timestamp).toDate();
+        } else {
+          parsed = _parseDate(data['date']?.toString() ?? '');
+        }
 
-    final now = DateTime.now();
-    double recetteDuJour = 0;
-    double recetteMensuelle = 0;
-    for (final doc in recetteSnapshot.docs) {
-      final data = doc.data() as Map<String, dynamic>? ?? {};
-      final montant = _toDouble(data['montant']);
+        if (parsed == null && data['created_at'] != null) {
+          if (data['created_at'] is Timestamp) {
+            parsed = (data['created_at'] as Timestamp).toDate();
+          } else {
+            parsed = _parseDate(data['created_at']?.toString() ?? '');
+          }
+        }
 
-      DateTime? parsed;
-      if (data['date'] is Timestamp) {
-        parsed = (data['date'] as Timestamp).toDate();
-      } else {
-        parsed = _parseDate(data['date']?.toString() ?? '');
+        if (_isSameDay(parsed, now)) {
+          recetteDuJour += montant;
+        }
+
+        if (parsed != null && parsed.year == now.year && parsed.month == now.month) {
+          recetteMensuelle += montant;
+        }
       }
 
-      if (_isSameDay(parsed, now)) {
-        recetteDuJour += montant;
-      }
-
-      if (parsed != null && parsed.year == now.year && parsed.month == now.month) {
-        recetteMensuelle += montant;
-      }
-    }
-
-    return {
-      'recetteDuJour': recetteDuJour,
-      'recetteMensuelle': recetteMensuelle,
-    };
+      return {
+        'recetteDuJour': recetteDuJour,
+        'recetteMensuelle': recetteMensuelle,
+      };
+    });
   }
 
   double _toDouble(dynamic v) {
@@ -227,8 +227,8 @@ class _HomegerantState extends State<Homegerant> {
                 ),
               ),
               const SizedBox(height: 16),
-              FutureBuilder<Map<String, dynamic>>(
-                future: _statsFuture,
+              StreamBuilder<Map<String, dynamic>>(
+                stream: _statsStream,
                 builder: (context, snap) {
                   final data = snap.data ?? {'recetteDuJour': 0.0, 'recetteMensuelle': 0.0};
                   final recette = (data['recetteDuJour'] as double?) ?? 0.0;

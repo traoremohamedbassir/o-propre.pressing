@@ -146,12 +146,6 @@ bool ischecked = true;
             onPressed: () => Navigator.pop(context),
             child: const Text('Annuler'),
           ),
-          //  'nom_clt': _nomcltController.text,
-          //         'date': _dateController.text,
-          //         'montant': _montantContoller.text,
-          //         'description': _descriptionContoller.text,
-          //         'syspaiement ': selectedpaie ?? 'espece',
-          //         'montant_facture': _mon_factContoller.text,
           TextButton(
             onPressed: () {
               Navigator.pop(context, {
@@ -178,52 +172,50 @@ bool ischecked = true;
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor:  Colors.blue.shade100,
+     backgroundColor:  Colors.blue.shade100,
       appBar: AppBar(
-         backgroundColor:  Colors.blue.shade700,
-        title: Text('Encaissement'),
+       backgroundColor:  Colors.blue.shade700,
+        elevation: 0,
+        title: const Text(
+          'Encaissement',
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
         actions: [
-             IconButton(
-              tooltip: 'Recette',
-              onPressed: (){
-               Navigator.push(context, MaterialPageRoute(builder: (_)
-                 => Recette(),
-               ));
-             }, icon: Icon(Icons.receipt, color: Colors.white, size: 40)),
-              SizedBox(width: 6),
-              Padding(
-              padding: const EdgeInsets.only(right: 12),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: IconButton(
-                  onPressed: () {
-                   showDialog(context: context, builder: (context) => Ajoutencaisse());
-                  },
-                  icon: const Icon(Icons.add, color: Colors.black),
-                ),
-              ),
-            ),
-      ],),
-drawer: Drawers(),
-body: ListView(
-  children: [
-    Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            child: TextField(
+          IconButton(
+            tooltip: 'Recette',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const Recette()),
+              );
+            },
+            icon: const Icon(Icons.receipt_long_rounded, color: Colors.white, size: 28),
+          ),
+          const SizedBox(width: 8),
+        ],
+      ),
+      drawer: const Drawers(),
+      body: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+        child: Column(
+          children: [
+            TextField(
               controller: _searchController,
               decoration: InputDecoration(
                 hintText: 'Rechercher par nom ou date (JJ/MM/AAAA)',
-                prefixIcon: const Icon(Icons.search),
+                filled: true,
+                fillColor: Colors.white,
+                prefixIcon: const Icon(Icons.search, color: Colors.teal),
                 suffixIcon: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     if (_searchQuery.isNotEmpty)
                       IconButton(
                         tooltip: 'Effacer la recherche',
-                        icon: const Icon(Icons.clear),
+                        icon: const Icon(Icons.clear, color: Colors.teal),
                         onPressed: () {
                           _searchController.clear();
                           setState(() => _searchQuery = '');
@@ -231,120 +223,175 @@ body: ListView(
                       ),
                     IconButton(
                       tooltip: 'Choisir une date',
-                      icon: const Icon(Icons.calendar_today_outlined),
+                      icon: const Icon(Icons.calendar_today_outlined, color: Colors.teal),
                       onPressed: _pickDateFilter,
                     ),
                   ],
                 ),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide.none,
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide.none,
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: const BorderSide(color: Color(0xFF99F6E4), width: 1.5),
+                ),
               ),
               onChanged: (v) => setState(() => _searchQuery = v.trim()),
             ),
-          ),
-         Column(
-            children: [
-              StreamBuilder<QuerySnapshot>(
+            const SizedBox(height: 14),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'Historique encaissements',
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 22,
+                  color: Colors.grey.shade800,
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Expanded(
+              child: StreamBuilder<QuerySnapshot>(
                 stream: _encaisseStream(),
                 builder: (context, snapshot) {
-                  if (snapshot.hasError) return Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Text('Erreur: ${snapshot.error}'),
-                  );
-                  if (snapshot.connectionState == ConnectionState.waiting) return Center(child: CircularProgressIndicator());
+                  if (snapshot.hasError) {
+                    return Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Text('Erreur: ${snapshot.error}'),
+                    );
+                  }
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
 
                   final docs = (snapshot.data?.docs ?? [])
-                      .where((doc) => _matchesSearch(doc.data() as Map<String, dynamic>? ?? {}))
+                      .where(
+                        (doc) =>
+                            _matchesSearch(doc.data() as Map<String, dynamic>? ?? {}),
+                      )
                       .toList();
-                  if (docs.isEmpty) return Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Text('Aucun resultat trouvé'),
-                  );
+
+                  if (docs.isEmpty) {
+                    return const Padding(
+                      padding: EdgeInsets.all(16.0),
+                      child: Text('Aucun résultat trouvé'),
+                    );
+                  }
 
                   return ListView.separated(
-                    shrinkWrap: true,
-                    physics: NeverScrollableScrollPhysics(),
                     itemCount: docs.length,
-                    separatorBuilder: (_, __) => Divider(height: 1),
+                    separatorBuilder: (_, __) => const SizedBox(height: 10),
                     itemBuilder: (context, index) {
                       final doc = docs[index];
                       final data = doc.data() as Map<String, dynamic>? ?? {};
                       final nom = data['nom_clt']?.toString() ?? '';
                       final montant = (data['montant'] ?? 0).toString();
-                      final description = data['description']?.toString();
-                      final syspaiement = data['syspaiement ']?.toString();
-                      final montant_facture = data['montant_facture']?.toString() ?? '';
+                      final description = data['description']?.toString() ?? '—';
+                      final syspaiement = data['syspaiement ']?.toString() ?? '—';
+                      final montantFacture = data['montant_facture']?.toString() ?? '—';
                       String dateStr = '';
                       if (data['date'] is Timestamp) {
                         final d = (data['date'] as Timestamp).toDate();
-                        dateStr = '${d.day.toString().padLeft(2,'0')}/${d.month.toString().padLeft(2,'0')}/${d.year}';
+                        dateStr =
+                            '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
                       } else if (data['date'] is String) {
                         dateStr = data['date'];
                       }
-                      return ListTile(
-                        title: Row(
-                          children: [
-                            Text('$nom',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 20
-                            ),
-                            ),
-                            SizedBox(width: 20,),
-                            Text(' -   $montant FCFA',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 20
-                            ),
+
+                      return Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(18),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.04),
+                              blurRadius: 8,
+                              offset: const Offset(0, 3),
                             ),
                           ],
                         ),
-                        subtitle: Column(
-                          children: [
-                            Text('systeme de paiement : $syspaiement \n montant de la facture : $montant_facture \n descriptions : $description \n Date: $dateStr',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w900,
-                              fontSize: 15,
-                            ),
-                            ),
-                           
-                          ],
-                        ),
-                       
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                          
-                            IconButton(
-                              tooltip: 'modifier',
-                              icon: Icon(Icons.edit,color: Colors.green,),
-                              onPressed: (){
-                                _updateencaissement(doc);
-                              },
-                            ),
-                            IconButton(
-                              tooltip: 'supprimer',
-                              icon: Icon(Icons.delete,color: Colors.red,),
-                              onPressed: (() async {
-                                    await _encaisse
-                                        .doc(doc.reference.id)
-                                        .delete();
-                                    
-                                  }),
-                            ),
-                          ],
+                        child: Padding(
+                          padding: const EdgeInsets.all(14),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      nom,
+                                      style: const TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w700,
+                                        color: Color(0xFF111827),
+                                      ),
+                                    ),
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 6,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFCCFBF1),
+                                      borderRadius: BorderRadius.circular(999),
+                                    ),
+                                    child: Text(
+                                      '$montant FCFA',
+                                      style: const TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w700,
+                                        color: Color(0xFF115E59),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              _InfoRow(label: 'Date', value: dateStr),
+                              _InfoRow(label: 'Paiement', value: syspaiement),
+                              _InfoRow(label: 'Facture', value: montantFacture),
+                              _InfoRow(label: 'Description', value: description),
+                              const SizedBox(height: 12),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  IconButton(
+                                    tooltip: 'Modifier',
+                                    icon: const Icon(Icons.edit, color: Colors.green),
+                                    onPressed: () => _updateencaissement(doc),
+                                  ),
+                                  IconButton(
+                                    tooltip: 'Supprimer',
+                                    icon: const Icon(Icons.delete, color: Colors.red),
+                                    onPressed: () async {
+                                      await _encaisse.doc(doc.reference.id).delete();
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
                       );
                     },
                   );
                 },
               ),
-            ],
-          ),
-  ],
-),
+            ),
+          ],
+        ),
+      ),
     );
   }
-Stream<QuerySnapshot> _encaisseStream() {
+
+  Stream<QuerySnapshot> _encaisseStream() {
     return _encaisse.orderBy('date', descending: true).snapshots();
   }
 
@@ -354,228 +401,40 @@ Stream<QuerySnapshot> _encaisseStream() {
     super.dispose();
   }
 }
-class Ajoutencaisse extends StatefulWidget {
-  const Ajoutencaisse({super.key});
 
-  @override
-  State<Ajoutencaisse> createState() => _AjoutencaisseState();
-}
+class _InfoRow extends StatelessWidget {
+  final String label;
+  final String value;
 
-class _AjoutencaisseState extends State<Ajoutencaisse> {
-  String? selectedpaie = "espece";
-  final TextEditingController _nomcltController = TextEditingController();
-  final TextEditingController _montantController = TextEditingController();
-  final TextEditingController _mon_factController = TextEditingController();
-  final TextEditingController _dateController = TextEditingController();
-  final TextEditingController _descriptionController = TextEditingController();
-  
-  final _formKey = GlobalKey<FormState>();
-
-  @override
-  void initState() {
-    super.initState();
-    final now = DateTime.now();
-    _dateController.text = '${now.day.toString().padLeft(2, '0')}/${now.month.toString().padLeft(2, '0')}/${now.year}';
-  }
-  final CollectionReference _encaisse = FirebaseFirestore.instance.collection(
-    "encaissement",
-  );
- 
+  const _InfoRow({required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      backgroundColor: Colors.white,
-      
-      content: Form(
-        key: _formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            
-            SizedBox(height: 4),
-            TextFormField(
-              controller: _nomcltController,
-              decoration: InputDecoration(
-                hintText: 'Nom clt',
-                fillColor: Colors.white,
-                filled: true,
-                // prefixIcon: Icon(Icons.lock),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(40),
-                  borderSide: BorderSide(color: Colors.black),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(40),
-                  borderSide: BorderSide(color: Colors.black),
-                ),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 90,
+            child: Text(
+              '$label :',
+              style: const TextStyle(
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF4B5563),
               ),
-              validator: (value) {
-                    if (value == null || value.trim().isEmpty) return 'Le nom est requis';
-                    return null;
-                  },
             ),
-        
-            SizedBox(height: 4),
-            TextFormField(
-              controller: _montantController,
-              decoration: InputDecoration(
-                hintText: "montant",
-                fillColor: Colors.white,
-                filled: true,
-                // prefixIcon: Icon(Icons.lock),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(40),
-                  borderSide: BorderSide(color: Colors.black),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(40),
-                  borderSide: BorderSide(color: Colors.black),
-                ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(
+                color: Color(0xFF111827),
               ),
-             validator: (value) {
-                    if (value == null || value.trim().isEmpty) return 'Le montant est requis';
-                    return null;
-                  },
             ),
-             SizedBox(height: 4),
-            TextFormField(
-              controller: _mon_factController,
-              decoration: InputDecoration(
-                hintText: "montant de la facture",
-                fillColor: Colors.white,
-                filled: true,
-                // prefixIcon: Icon(Icons.lock),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(40),
-                  borderSide: BorderSide(color: Colors.black),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(40),
-                  borderSide: BorderSide(color: Colors.black),
-                ),
-              ),
-             validator: (value) {
-                    if (value == null || value.trim().isEmpty) return 'Le montant est requis';
-                    return null;
-                  },
-            ),
-            SizedBox(height: 4),
-            TextFormField(
-              controller: _descriptionController,
-              decoration: InputDecoration(
-                hintText: "description",
-                fillColor: Colors.white,
-                filled: true,
-                // prefixIcon: Icon(Icons.lock),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(40),
-                  borderSide: BorderSide(color: Colors.black),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(40),
-                  borderSide: BorderSide(color: Colors.black),
-                ),
-              ),
-             validator: (value) {
-                    if (value == null || value.trim().isEmpty) return 'Le montant est requis';
-                    return null;
-                  },
-            ),
-            SizedBox(height: 4),
-                Expanded(
-                  flex: 1,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: DropdownButton<String>(
-                      value: selectedpaie,
-                      isExpanded: true,
-                      hint: Text('systeme depaiement'),
-
-                      underline: SizedBox(),
-                      items: [
-                        DropdownMenuItem(
-                          value: 'espece',
-                          child: Text('espece'),
-                        ),
-                        DropdownMenuItem(
-                          value: 'wave',
-                          child: Text('wave'),
-                        ),
-                        DropdownMenuItem(
-                          value: 'orange money',
-                          child: Text('orange money'),
-                        ),
-                      ],
-                      onChanged: (String? value) {
-                        setState(() {
-                          selectedpaie = value ?? 'espece';
-                        });
-                      },
-                    ),
-                  ),
-                ),
-            SizedBox(height: 4),
-            TextFormField(
-              controller: _dateController,
-                    readOnly: true,
-              decoration: InputDecoration(
-                hintText: 'date',
-                fillColor: Colors.white,
-                filled: true,
-                // prefixIcon: Icon(Icons.lock),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(40),
-                  borderSide: BorderSide(color: Colors.black),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(40),
-                  borderSide: BorderSide(color: Colors.black),
-                ),
-              ),
-              
-            ),
-            SizedBox(height: 6),
-           
-          ],
-        ),
+          ),
+        ],
       ),
-      actions: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text('Annuler'),
-            ),
-            TextButton(
-              onPressed: () async {
-                if (!_formKey.currentState!.validate()) return;
-                
-                await _encaisse.add({
-                  'nom_clt': _nomcltController.text,
-                  'date': _dateController.text,
-                  'montant': _montantController.text,
-                  'description': _descriptionController.text,
-                  'syspaiement ': selectedpaie ?? 'espece',
-                  'montant_facture': _mon_factController.text,
-                });
-                _nomcltController.clear();
-                _dateController.clear();
-                _montantController.clear();
-                
-                setState(() {
-                  Navigator.pop(context);
-                });
-              },
-              child: Text('Ajouter'),
-            ),
-          ],
-        ),
-      ],
     );
   }
 }

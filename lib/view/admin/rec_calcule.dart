@@ -384,10 +384,17 @@ class _RecetteCalculState extends State<RecetteCalcul> {
           SizedBox(height: 10),
           Padding(
             padding: const EdgeInsets.only(right: 8),
-            child: FilledButton.icon(
+            child: FilledButton(
               onPressed: _isSaving ? null : _saveInvoice,
-              icon: const Icon(Icons.save),
-              label: const Text('Enregistrer'),
+              // icon: const Icon(Icons.save),
+              // label: const Text('Enregistrer'),
+              child: _isSaving
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Text('Enregistrer'),
             ),
           ),
         ],
@@ -492,11 +499,7 @@ class _RecetteCalculState extends State<RecetteCalcul> {
                           horizontal: 12,
                           vertical: 10,
                         ),
-                      ), validator: (value) {
-                    if (value == null || value.trim().isEmpty) return 'numero est requis';
-                    return null;
-                  },
-
+                      ), 
                     ),
                   ),
                     ],

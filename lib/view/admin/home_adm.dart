@@ -54,7 +54,7 @@ class _HomeadmState extends State<Homeadm> {
   void initState() {
     super.initState();
     _loadUserName();
-    _loadRecettesSummary();
+    _loadEncaissementSummary();
   }
 // use
   Future<void> _loadUserName() async {
@@ -90,9 +90,10 @@ class _HomeadmState extends State<Homeadm> {
     return DateTime.tryParse(text);
   }
 
-  Future<void> _loadRecettesSummary() async {
+  Future<void> _loadEncaissementSummary() async {
     try {
-      final snapshot = await FirebaseFirestore.instance.collection('recettes').get();
+      final snapshot =
+          await FirebaseFirestore.instance.collection('encaissement').get();
       final now = DateTime.now();
       double today = 0.0;
       final totals = {for (var i = 1; i <= 12; i++) i: 0.0};
@@ -174,7 +175,7 @@ class _HomeadmState extends State<Homeadm> {
                   children: [
                     Expanded(
                           child: _StatCard(
-                            title: 'Recette du jour',
+                            title: 'Encaissement du jour',
                             value: _formatCurrency(_todayRevenue),
                             icon: Icons.monetization_on_outlined,
                             color: const Color(0xFF10B981),
