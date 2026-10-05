@@ -95,7 +95,6 @@ class RapportResultats extends StatelessWidget {
                       DataColumn(label: Text('Facture')),
                       DataColumn(label: Text('nom_clt')),
                       DataColumn(label: Text('montant')),
-                      // DataColumn(label: Text('Quantité')),
                     ],
                     rows: rows.map((row) {
                       return DataRow(cells: [
@@ -103,7 +102,6 @@ class RapportResultats extends StatelessWidget {
                         DataCell(Text(row['facture'])),
                         DataCell(Text(row['nom_clt'])),
                         DataCell(Text(row['montant'])),
-                        // DataCell(Text(row['quantite'])),
                       ]);
                     }).toList(),
                   ),

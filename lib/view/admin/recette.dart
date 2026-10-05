@@ -185,25 +185,16 @@ class _RecetteState extends State<Recette> {
 
     final nomClient = (data['nom_clt'] ?? '').toString();
     final montantRecette = (data['montant'] ?? 0).toString();
-    final dateRecette = (() {
-      final dateValue = data['date'];
-      if (dateValue is Timestamp) {
-        final d = dateValue.toDate();
-        return '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
-      }
-      if (dateValue is DateTime) {
-        final d = dateValue;
-        return '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
-      }
-      return dateValue?.toString() ?? '';
-    })();
+    final today = DateTime.now();
+    final dateEncaissement =
+        '${today.day.toString().padLeft(2, '0')}/${today.month.toString().padLeft(2, '0')}/${today.year}';
     final typePaiement = (data['syspaiement '] ?? 'espece').toString();
 
     final result = await showDialog<bool>(
       context: context,
       builder: (context) => Ajoutencaisse(
         nomClient: nomClient,
-        date: dateRecette,
+        date: dateEncaissement,
         montantFacture: montantRecette,
         typePaiement: typePaiement,
       ),
@@ -731,6 +722,42 @@ class _AjoutencaisseState extends State<Ajoutencaisse> {
         ? widget.date
         : '${DateTime.now().day.toString().padLeft(2, '0')}/${DateTime.now().month.toString().padLeft(2, '0')}/${DateTime.now().year}';
   }
+
+  DateTime? _parseDateFromString(String value) {
+    final text = value.trim();
+    if (text.isEmpty) return null;
+
+    final parts = text.split('/');
+    if (parts.length != 3) return null;
+
+    final day = int.tryParse(parts[0]);
+    final month = int.tryParse(parts[1]);
+    final year = int.tryParse(parts[2]);
+
+    if (day == null || month == null || year == null) return null;
+
+    final date = DateTime(year, month, day);
+    if (date.day != day || date.month != month || date.year != year) return null;
+    return date;
+  }
+
+  Future<void> _pickDate() async {
+    final initialDate = _parseDateFromString(_dateController.text) ?? DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initialDate,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+    );
+
+    if (picked == null) return;
+
+    setState(() {
+      _dateController.text =
+          '${picked.day.toString().padLeft(2, '0')}/${picked.month.toString().padLeft(2, '0')}/${picked.year}';
+    });
+  }
+
   final CollectionReference _encaisse = FirebaseFirestore.instance.collection(
     "encaissement",
   );
@@ -875,12 +902,15 @@ class _AjoutencaisseState extends State<Ajoutencaisse> {
             SizedBox(height: 4),
             TextFormField(
               controller: _dateController,
-                    readOnly: true,
+              readOnly: true,
               decoration: InputDecoration(
                 hintText: 'date',
                 fillColor: Colors.white,
                 filled: true,
-                // prefixIcon: Icon(Icons.lock),
+                suffixIcon: IconButton(
+                  icon: const Icon(Icons.calendar_today_outlined),
+                  onPressed: _pickDate,
+                ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(40),
                   borderSide: BorderSide(color: Colors.black),
@@ -890,7 +920,6 @@ class _AjoutencaisseState extends State<Ajoutencaisse> {
                   borderSide: BorderSide(color: Colors.black),
                 ),
               ),
-              
             ),
             SizedBox(height: 6),
            
